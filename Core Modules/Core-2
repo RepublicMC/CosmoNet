@@ -1,1 +1,216 @@
+options:
+#===============[ !CHAT CUSTOMIZATION ]===============
+#
+    p: &f&l(&a&lCosmo&d&lNet&f&l) # Command/Chat Prefix
+    t: &a # Base color
+    h: &d # Highlight color
+    h2: &d # Secondary Highlight Color
+    error: &c[Error] # Error Prefix
+    permissionError: &cYou are not allowed to do that. # Permission error for commands
+    alert: &f&l(&a&lCosmo&d&lNet&f&l) # Broadcast prefix
 
+#
+#=====================[ !OPTIONS ]====================
+#
+#! Some of these options are important, so make sure you go over them every update.
+#
+    #nothing here right now
+#
+#! Some of these options are important, so make sure you go over them every update.
+#
+#====================[ !FUNCTIONS ]===================
+#
+    #nothing here right now
+#
+#=====================[ !CODE ]======================
+#
+command /Core [<text>]:
+    description: Shows all commands in Core
+    trigger:
+        if arg 1 is not set:
+            send "&3&m---+---&r &bCore &3&m---+---&r"
+            send "&3&oCore&r by &oVexio"
+            send "&rAssociated with the &eIon Project"
+            jsonProton("%sender%", "&d&nWebsite&r||ttp:&7&oClick to visit||url:http://ion.vexio.us/|| &d&nSkUnity&r||ttp:&7&oClick to visit||url:https://forums.skunity.com/resources/71/")
+        else if arg 1 is "help":
+            send "&3&m---+---&r &bCore &3&m---+---&r"
+            send " &8▪ &7A List of commands can be found here:"
+            send " &f&nhttp://ion.vexio.us/docs##Core"
+        else if arg 1 = "reload":
+            player command "/skript reload %{ion.Core.loc}%"
+        else if arg 1 is "flags":
+            send "&3&m---+---&r &bCore &3&m---+---&r"
+            send "&bFlags"
+            send "&7w = World, g = global"
+            send " &8▪ {@t}monsterSpawning {@h}(w)"
+            send " &8▪ {@t}animalSpawning {@h}(w)"
+            send " &8▪ {@t}tileDrops {@h}(w)"
+            send " &8▪ {@t}deathMessages {@h}(g)"
+            send " &8▪ {@t}chatMessages {@h}(w+g)"
+            send " &8▪ {@t}timeCycle {@h}(w)"
+            send " &8▪ {@t}playerVsPlayer {@h}(w)"
+command /globalSettings [<text>] [<text>]:
+    permission: Core.settings.global
+    description: Edits server-wide settings
+    aliases: /gSettings, /gs
+    trigger:
+        if arg 1 is not set:
+            send "&cUsage: /globalSettings [flag] [value]"
+            send "&cTo view a flags list, execute &r&c/Core flags&c&o."
+        else if arg 1 is "deathMessages":
+            if arg 2 is "on" or "true" or "enable" or "1":
+                send "{@p} &bGlobal &8❘ {@h}deathMessages{@t} has been set to {@h2}true{@t}."
+                set {Core.deathMessages} to true
+            else if arg 2 is "off" or "false" or "disable" or "0":
+                send "{@p} &bGlobal &8❘ {@h}deathMessages{@t} has been set to &cfalse{@t}."
+                set {Core.deathMessages} to false
+            else:
+                send "{@error} &cValue not set"
+                send "&cUsage: /globalSettings %arg-1% [value]"
+        else if arg 1 is "chat" or "chatMessages":
+            if arg 2 is "on" or "true" or "enable" or "1":
+                send "{@p} &bGlobal &8❘ {@h}chatMessages{@t} has been set to {@h2}true{@t}."
+                set {Core.chatMessages} to true
+            else if arg 2 is "off" or "false" or "disable" or "0":
+                send "{@p} &bGlobal &8❘ {@h}chatMessages{@t} has been set to &cfalse{@t}."
+                set {Core.chatMessages} to false
+            else:
+                send "{@error} &cValue not set"
+                send "&cUsage: /globalSettings %arg-1% [value]"
+command /worldSettings [<text>] [<text>]:
+    permission: Core.settings.world
+    description: Edits world-wide settings
+    aliases: /wSettings, /ws
+    trigger:
+        if arg 1 is not set:
+            send "&cUsage: /worldSettings [flag] [value]"
+            send "&c&oTo view a flags list, execute &r&c/Core flags&c&o."
+        else if arg 1 is "monsterSpawning":
+            if arg 2 is "on" or "true" or "enable" or "1":
+                send "{@p} &bWorld &8❘ {@h}monsterSpawning{@t} has been set to {@h2}true{@t} for {@h}%sender's world%{@t}."
+                set {Core.monsterSpawning.world::%sender's world%} to true
+            else if arg 2 is "off" or "false" or "disable" or "0":
+                send "{@p} &bWorld &8❘ {@h}monsterSpawning{@t} has been set to &cfalse{@t} for {@h}%sender's world%{@t}."
+                set {Core.monsterSpawning.world::%sender's world%} to false
+            else:
+                send "{@error} &cValue not set"
+                send "&cUsage: /worldSettings %arg-1% [value]"
+        else if arg 1 is "animalSpawning":
+            if arg 2 is "on" or "true" or "enable" or "1":
+                send "{@p} &bWorld &8❘ {@h}animalSpawning{@t} has been set to {@h2}true{@t} for {@h}%sender's world%{@t}."
+                set {Core.animalSpawning.world::%sender's world%} to true
+            else if arg 2 is "off" or "false" or "disable" or "0":
+                send "{@p} &bWorld &8❘ {@h}animalSpawning{@t} has been set to &cfalse{@t} for {@h}%sender's world%{@t}."
+                set {Core.animalSpawning.world::%sender's world%} to false
+            else:
+                send "{@error} &cValue not set"
+                send "&cUsage: /worldSettings %arg-1% [value]"
+        else if arg 1 is "tileDrops":
+            if arg 2 is "on" or "true" or "enable" or "1":
+                send "{@p} &bWorld &8❘ {@h}tileDrops{@t} has been set to {@h2}true{@t} for {@h}%sender's world%{@t}."
+                set {Core.tileDrops.world::%sender's world%} to true
+            else if arg 2 is "off" or "false" or "disable" or "0":
+                send "{@p} &bWorld &8❘ {@h}tileDrops{@t} has been set to &cfalse{@t} for {@h}%sender's world%{@t}."
+                set {Core.tileDrops.world::%sender's world%} to false
+            else:
+                send "{@error} &cValue not set"
+                send "&cUsage: /worldSettings %arg-1% [value]"
+        else if arg 1 is "chatMessages" or "chat":
+            if arg 2 is "on" or "true" or "enable" or "1":
+                send "{@p} &bWorld &8❘ {@h}chatMessages{@t} has been set to {@h2}true{@t} for {@h}%sender's world%{@t}."
+                set {Core.chatMessages.world::%sender's world%} to true
+            else if arg 2 is "off" or "false" or "disable" or "0":
+                send "{@p} &bWorld &8❘ {@h}chatMessages{@t} has been set to &cfalse{@t} for {@h}%sender's world%{@t}."
+                set {Core.chatMessages.world::%sender's world%} to false
+            else:
+                send "{@error} &cValue not set"
+                send "&cUsage: /worldSettings %arg-1% [value]"
+        else if arg 1 is "view":
+            send "&3&m---+---&r &b%sender's world%'s Settings &3&m---+---&r"
+            if {Core.monsterSpawning.world::%sender's world%} is false:
+                send " &8• &cmonsterSpawning"
+            else:
+                send " &8• {@h2}monsterSpawning"
+            if {Core.animalSpawning.world::%sender's world%} is false:
+                send " &8• &canimalSpawning"
+            else:
+                send " &8• {@h2}animalSpawning"
+            if {Core.tileDrops.world::%sender's world%} is false:
+                send " &8• &ctileDrops"
+            else:
+                send " &8• {@h2}tileDrops"
+            if {Core.timeCycle.world::%sender's world%} is false:
+                send " &8• &ctimeCycle"
+            else if {Core.timeCycle.world::%sender's world%} = "day":
+                send " &8• &7timeCycle &e(Day)"
+            else if {Core.timeCycle.world::%sender's world%} = "night":
+                send " &8• &7timeCycle &8(Night)"
+            else:
+                send " &8• {@h2}timeCycle"
+            if {Core.pvp.world::%sender's world%} is false:
+                send " &8• &cplayerVsPlayer"
+            else:
+                send " &8• {@h2}playerVsPlayer"
+            stop
+        else if arg 1 is "timeCycle" or "time":
+            if arg 2 is "day":
+                send "{@p} &bWorld &8❘ {@h}timeCycle{@t} has been set to &eday{@t} for {@h}%sender's world%{@t}."
+                set {Core.timeCycle.world::%sender's world%} to "day"
+            else if arg 2 is "night":
+                send "{@p} &bWorld &8❘ {@h}timeCycle{@t} has been set to &8night{@t} for {@h}%sender's world%{@t}."
+                set {Core.timeCycle.world::%sender's world%} to "night"
+            else if arg 2 is "off" or "disable" or "false" or "0":
+                send "{@p} &bWorld &8❘ {@h}timeCycle{@t} has been set to &cfalse{@t} for {@h}%sender's world%{@t}."
+                set {Core.timeCycle.world::%sender's world%} to false
+            else:
+                send "{@error} &cValue not set"
+                send "&cUsage: /worldSettings %arg-1% [value]"
+        else if arg 1 = "playerVsPlayer" or "pvp":
+            if arg 2 = "on", "enable" or "true":
+                set {Core.pvp.world::%sender's world%} to true
+                send "{@p} &bWorld &8❘ {@h}playerVsPlayer{@t} has been set to {@h2}true{@t} for {@h}%sender's world%{@t}."
+            else if arg 2 = "off", "disable" or "false":
+                set {Core.pvp.world::%sender's world%} to false
+                send "{@p} &bWorld &8❘ {@h}playerVsPlayer{@t} has been set to &cfalse{@t} for {@h}%sender's world%{@t}."
+            else:
+                send "{@error} &cValue not set"
+                send "&cUsage: /worldSettings %arg-1% [value]"
+#============== functionality
+on death of player:
+    if {Core.deathMessages} is false:
+        set death message to ""
+on chat:
+    if {Core.chatMessages} is false:
+        cancel event
+    else:
+        if {Core.chatMessages.world::%event-player's world%} is false:
+            cancel event
+on spawn:
+    if event-entity is a zombie or skeleton or creeper or spider or silverfish or blaze or slime or magma cube or witch or ghast or enderman:
+        if {Core.monsterSpawning.world::%event-entity's world%} is false:
+            cancel event
+    else if event-entity is a cow or pig or bat or chicken or sheep or villager or squid or wolf or ocelot or rabbit:
+        if {Core.animalSpawning.world::%event-entity's world%} is false:
+            cancel event
+on item spawn:
+    if {Core.tileDrops.world::%event-entity's world%} is false:
+        cancel event
+every 1 second:
+    loop all worlds:
+        if {Core.timeCycle.world::%loop-world%} = "day":
+            set time in loop-world to 12:00pm
+        else if {Core.timeCycle.world::%loop-world%} = "night":
+            set time in loop-world to 12:00am
+on tab completer for "/worldsettings":
+    if argument at 1 is not set:
+        add "monsterSpawning" to completions
+        add "animalSpawning" to completions
+        add "tileDrop" to completions
+        add "deathMessages" to completions
+        add "chatMessages" to completions
+        add "timeCycle" to completions
+on damage of player:
+    attacker is player
+    "%victim's world%" = "%attacker's world%":
+        {Core.pvp.world::%victim's world%} = false:
+            cancel event
