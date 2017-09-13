@@ -1,0 +1,1477 @@
+options:
+#===============[ !CHAT CUSTOMIZATION ]===============
+#
+    p: &f&l(&a&lCosmo&d&lNet&f&l) # Command/Chat Prefix
+    t: &a # Base color
+    h: &d # Highlight color
+    h2: &d # Secondary Highlight Color
+    error: &c[Error] # Error Prefix
+    permissionError: &cYou are not allowed to do that. # Permission error for commands
+    joinMessage: &f&l(&a&lCosmo&d&lNet&f&l) &d%name of player% &ajoined the server. # Connect message for players
+    quitMessage: &f&l(&a&lCosmo&d&lNet&f&l) &d%name of player% &aleft the server. # Disconnect message for players
+    alert: &f&l(&a&lCosmo&d&lNet&f&l) # Broadcast prefix
+#
+#=====================[ !OPTIONS ]====================
+#
+#! Some of these options are important, so make sure you go over them every update.
+#
+    spawnJoin: true # Teleports the player to the spawn on connect
+    customConnectMessages: true # If this is false, it will use vanilla messages. If you want a hidden message, set this to `none`
+#
+#! Some of these options are important, so make sure you go over them every update.
+#
+#====================[ !FUNCTIONS ]===================
+#
+aliases:
+    blacklisted = tnt, bedrock
+#! json.sk
+# I DO NOT OWN json.sk, I DON'T TAKE ANY CREDIT
+# json.sk BELONGS TO "RezzedUp"
+options:
+    debug: false
+    codes: 0|1|2|3|4|5|6|7|8|9|a|b|c|d|e|f|k|l|m|n|o|r
+function removeColorCore(msg: text) :: text:
+    set {_m::*} to {_msg} split at ""
+    set {_color-codes} to "{@codes}"
+    set {_colors::*} to {_color-codes} split at "|"
+    set {_new} to ""
+    loop {_m::*}:
+        set {_char} to loop-value
+        set {_prev} to the last character of {_new}
+        if {_prev} is "&":
+            loop {_colors::*}:
+                if loop-value-2 is {_char}:
+                    set {_skip} to true
+        if {_skip} is set:
+            delete {_skip}
+        else:
+            set {_new} to "%{_new}%%{_char}%"
+    return {_new}
+function jsonColorizeCore(msg: text, default-color: text = "&r") :: text:
+    set {_m::*} to {_msg} split at ""
+    set {_color-codes} to "{@codes}"
+    set {_colors::*} to {_color-codes} split at "|"
+    set {_color} to colored {_default-color}
+    set {_code} to the first character of {_color}
+    set {_new} to ""
+    set {_skip} to 0
+    loop amount of {_m::*} times:
+        if {_skip} is more than or equal to 1:
+            subtract 1 from {_skip}
+        else:
+            set {_char} to {_m::%loop-number%}
+            set {_next} to {_m::%loop-number + 1%}
+            if {@debug} is true:
+                broadcast "{@h2}[Character Check] &r%loop-number%: &7%{_char}% &r&onext: &8%{_next}% &r[%{_color}%color&r]"
+            if {_char} is "&" or {_code}:
+                if {@debug} is true:
+                    broadcast "{@h2}[Color Check] &rFOUND: &o%{_char}%%{_next}% &7&m<--&7&o is it valid?"
+                loop {_colors::*}:
+                    if loop-value-2 is {_next}:
+                        set {_color} to "%{_color}%%{_code}%%{_next}%"
+                        if {_next} is "r":
+                            set {_color} to {_default-color}
+                        set {_new} to "%{_new}%%{_color}%"
+                        set {_skip} to 1
+                if {_skip} is less than or equal to 0:
+                    set {_new} to "%{_new}%%{_char}%"
+            else if {_char} is " ":
+                set {_new} to "%{_new}% %{_color}%"
+            else:
+                set {_new} to "%{_new}%%{_char}%"
+    return {_new}
+function jsonSanitizeCore(msg: text) :: text:
+    if {@debug} is true:
+        broadcast "{@h2}[Sanitize] &7&oSanitizing input..."
+    set {_m::*} to {_msg} split at ""
+    loop {_m::*}:
+        if loop-value is """":
+            set {_m::%loop-index%} to "\""" # """
+        else if loop-value is "\":
+            set {_m::%loop-index%} to "\\"
+    set {_new} to join {_m::*} with ""
+    return {_new}
+function jsonFormatCore(msg: text, color: boolean = true) :: text:
+    set {_m::*} to {_msg} split at "||"
+    set {_current} to 1
+    loop {_m::*}:
+        if {_clusters::%{_current}%} is not set:
+            set {_clusters::%{_current}%} to ""
+        if {_clusters::%{_current}%::text} is not set:
+            set {_clusters::%{_current}%::text} to jsonSanitizeCore(loop-value)
+        else:
+            set {_tag} to the first 4 characters of loop-value
+            set {_value} to subtext of loop-value from characters 5 to the length of loop-value
+            if {_tag} is "ttp:":
+                set {_clusters::%{_current}%::tooltip} to jsonSanitizeCore({_value})
+            else if {_tag} is "cmd:":
+                set {_clusters::%{_current}%::command} to jsonSanitizeCore({_value})
+            else if {_tag} is "sgt:":
+                set {_clusters::%{_current}%::suggest} to jsonSanitizeCore({_value})
+            else if {_tag} is "url:":
+                if {_value} doesn't contain "http://" or "https://":
+                    set {_value} to "http://%{_value}%"
+                set {_clusters::%{_current}%::url} to jsonSanitizeCore({_value})
+            else if {_tag} is "ins:":
+                set {_clusters::%{_current}%::insertion} to jsonSanitizeCore({_value})
+            else:
+                add 1 to {_current}
+                set {_clusters::%{_current}%::text} to jsonSanitizeCore(loop-value)
+                set {_clusters::%{_current}%} to ""
+            if {@debug} is true:
+                broadcast "{@h2}[Tag Check] &3cluster:&b%{_current}% &8(&f&o%{_tag}%&8)"
+    loop {_clusters::*}:
+        if {@debug} is true:
+            broadcast "{@h2}[Cluster Check] &7&oCluster ##%loop-index% exists."
+        set {_i} to loop-index
+        set {_text} to {_clusters::%{_i}%::text}
+        if {_color} is true:
+            set {_text} to jsonColorizeCore({_text})
+        if {_json} is not set:
+            set {_json} to "{""text"":""%{_text}%"""
+        else:
+            set {_json} to "%{_json}%,{""text"":""%{_text}%"""
+        if {_clusters::%{_i}%::tooltip} is set:
+            if {_color} is true:
+                set {_tooltip} to jsonColorizeCore({_clusters::%{_i}%::tooltip})
+            else:
+                set {_tooltip} to {_clusters::%{_i}%::tooltip}
+            set {_json} to "%{_json}%,""hoverEvent"":{""action"": ""show_text"",""value"": ""%{_tooltip}%""}"
+        if {_clusters::%{_i}%::insertion} is set:
+            set {_json} to "%{_json}%,""insertion"":""%{_clusters::%{_i}%::insertion}%"",""obfuscated"":false"
+        if {_clusters::%{_i}%::command} is set:
+            set {_clickable} to "%{_json}%,""clickEvent"":{""action"":""run_command"",""value"":""%{_clusters::%{_i}%::command}%""}"
+        if {_clusters::%{_i}%::suggest} is set:
+            set {_clickable} to "%{_json}%,""clickEvent"":{""action"": ""suggest_command"",""value"": ""%{_clusters::%{_i}%::suggest}%""}"
+        if {_clusters::%{_i}%::url} is set:
+            set {_clickable} to "%{_json}%,""clickEvent"":{""action"": ""open_url"",""value"": ""%{_clusters::%{_i}%::url}%""}"
+        if {_clickable} is set:
+            set {_json} to "%{_clickable}%}"
+            delete {_clickable}
+        else:
+            set {_json} to "%{_json}%}"
+    return "{""text"":"""", ""extra"":[%{_json}%]}"
+function jsonCore(to: text, msg: text, color: boolean = true):
+    set {_msg} to jsonFormatCore({_msg}, {_color})
+    execute console command "/tellraw %{_to}% %{_msg}%"
+    if {@debug} is true:
+        set {_player} to {_to} parsed as offline player
+        if {_player} is online:
+            send uncolored {_msg} to {_player}
+function jsonBroadcastCore(msg: text, color: boolean = true):
+    jsonCore("@a", {_msg}, {_color})
+#
+#=====================[ !CODE ]======================
+#
+on load:
+    if {Core.maxHealth} is not set:
+        set {Core.maxHealth} to 10
+    delete {Core.teleporting::*}
+command /Core [<text>]:
+    description: Shows all commands in Core
+    trigger:
+        if arg 1 is not set:
+            send "&6&m---+---&r &eCore &6&m---+---&r"
+            send "&6&oCore&r by &oVexio"
+            send "&rAssociated with the &eIon Project"
+            jsonCore("%sender%", "&d&nWebsite&r||ttp:&7&oClick to visit||url:http://ion.vexio.us/|| &d&nSkUnity&r||ttp:&7&oClick to visit||url:https://forums.skunity.com/resources/71/")
+        else if arg 1 is "help":
+            send "&6&m---+---&r &eCore &6&m---+---&r"
+            send " &8▪ &7A List of commands can be found here:"
+            send " &f&nhttp://ion.vexio.us/docs##Core"
+        else if arg 1 = "reload":
+            player command "/skript reload %{ion.Core.loc}%"
+command /gamemode [<text>] [<text="%player%">]:
+    permission: Core.gamemode
+    description: Changes gamemode
+    permission message: {@permissionError} [Core.gamemode]
+    usage: /gamemode [gamemode] (player)
+    aliases: /gm
+    trigger:
+        set {_p} to arg-2 parsed as player
+        if {_p} is online:
+            if arg 1 is not set:
+                send "&cUsage: /gamemode [num] (player)"
+            else if arg 1 is "creative" or "c" or "1":
+                set {_p}'s gamemode to creative
+                send "{@p} Your gamemode has been updated to {@h}Creative{@t}." to {_p}
+                if {_p} isn't sender:
+                    send "{@p} {@h}%{_p}%{@t}'s gamemode was updated to {@h}Creative{@t}." to sender
+            else if arg 1 is "survival" or "s" or "0":
+                set {_p}'s gamemode to survival
+                send "{@p} Your gamemode has been updated to {@h}Survival{@t}." to {_p}
+                if {_p} isn't sender:
+                    send "{@p} {@h}%{_p}%{@t}'s gamemode was updated to {@h}Survival{@t}." to sender
+            else if arg 1 is "adventure" or "a" or "2":
+                set {_p}'s gamemode to adventure
+                send "{@p} Your gamemode has been updated to {@h}Adventure{@t}." to {_p}
+                if {_p} isn't sender:
+                    send "{@p} {@h}%{_p}%{@t}'s gamemode was updated to {@h}Adventure{@t}." to sender
+            else if arg 1 is "spectator" or "sp" or "3" or "spec":
+                set {_p}'s gamemode to spectator
+                send "{@p} Your gamemode has been updated to {@h}Spectator{@t}." to {_p}
+                if {_p} isn't sender:
+                    send "{@p} {@h}%{_p}%{@t}'s gamemode was updated to {@h}Spectator{@t}." to sender
+            else:
+                send "{@error} Invalid Argument."
+                send "&cUsage: /gamemode &m%arg-1%&c (player)"
+        else:
+            send "{@error} Player is not online."
+            send "&cUsage: /gamemode %arg-1% &m%arg-2%"
+command /fly [<text="%player%">]:
+    permission: Core.fly
+    description: Toggles flight
+    permission message: {@permissionError} [Core.fly]
+    usage: /fly (player)
+    trigger:
+        set {_p} to arg-1 parsed as player
+        if {_p} is online:
+            if {Core.fly::%{_p}%} is true:
+                delete {Core.fly::%{_p}%}
+                set {_p}'s fly mode to false
+                send "{@p} Flight mode {@h}disabled{@t}." to {_p}
+                if arg 1 isn't sender:
+                    send "{@p} {@h}%{_p}%{@t}'s flight mode was {@h}disabled{@t}." to sender
+            else:
+                set {Core.fly::%{_p}%} to true
+                set {_p}'s fly mode to true
+                send "{@p} Flight mode {@h}enabled{@t}." to {_p}
+                if arg 1 isn't sender:
+                    send "{@p} {@h}%{_p}%{@t}'s flight mode was {@h}enabled{@t}." to sender
+        else:
+            send "{@error} Player is not online."
+            send "&cUsage: /fly &m%arg-1%"
+command /tp [<player>] [<player>]:
+    permission: Core.tp
+    description: Teleports to player
+    permission message: {@permissionError} [Core.tp]
+    usage: /tp [player] (player)
+    trigger:
+        if arg 1 is not set:
+            send "&cUsage: /tp [player] (player)"
+        else if arg 1 is set:
+            if arg 2 is not set:
+                if {Core.teleporting::%sender%} is true:
+                    send "{@error} &cPlayer is already being teleported"
+                    stop
+                else:
+                    set {Core.teleporting::%sender%} to true
+                    set {Core.lastLoc::%sender%} to sender's location
+                    teleport sender to arg-1
+                    send "{@p} Teleported to {@h}%arg-1%{@t}." to sender
+                    wait 1 second
+                    delete {Core.teleporting::%sender%}
+            else:
+                if {Core.teleporting::%arg-1%} is true:
+                    send "&c&oPlayer is already being teleported"
+                    stop
+                else:
+                    set {Core.teleporting::%arg-1%} to true
+                    set {Core.lastLoc::%arg-1%} to arg-1's location
+                    teleport arg-1 to arg-2
+                    send "{@p} Teleported {@h}%arg-1%{@t} to {@t}%arg-2%{@t}" to sender
+                    send "{@p} Teleported to {@h}%arg-2%{@t}." to arg-1
+                    wait 1 second
+                    delete {Core.teleporting::%arg-1%}
+command /tphere [<player>]:
+    permission: Core.tphere
+    description: Teleports a player to sender
+    permission message: {@permissionError} [Core.tphere]
+    usage: /tphere [player]
+    aliases: /s
+    trigger:
+        if arg 1 is not set:
+            send "&cUsage: /tphere [player]"
+        else:
+            make player execute command "/tp %arg 1% %sender%"
+command /tpall:
+    permission: Core.tpall
+    description: Teleports all players to sender
+    permission message: {@permissionError}
+    usage: /tpall
+    trigger:
+        set {_loc} to sender's location
+        set {_count} to 0
+        set {_countTotal} to 0
+        set {_total} to number of all players
+        loop all players:
+            teleport loop-player to sender's location
+            add 1 to {_count}
+            add 1 to {_countTotal}
+            if {_count} = 20:
+                set {_count} to 0
+                send "{@p} Sent %{_countTotal}% people. Next group in {@h}3s{@t}. &8[&e%{_countTotal}%&7/&e%{_total}%&8]"
+                wait 3 seconds
+        delete {_loc}
+        send "{@p} Teleported all players to your location"
+        broadcast "{@p} Teleported to {@h}%sender%{@t}."
+command /tpcoords [<integer>] [<integer>] [<integer>]:
+    permission: Core.tpcoords
+    aliases: /tppos
+    permission message: {@permissionError} [Core.tpcoords]
+    usage: /tpcoords [x] [y] [z]
+    trigger:
+        if arg 1 is not set:
+            send "&cUsage: /tpcoords [x] [y] [z]"
+        else if arg 1 is set:
+            if arg 2 is set:
+                if arg 3 is set:
+                    if {Core.teleporting::%arg-1%} is true:
+                        send "{@error} &cPlayer is already being teleported"
+                        stop
+                    else:
+                        set {_x} to arg-1
+                        set {_z} to arg-3
+                        add 0.5 to {_x}
+                        add 0.5 to {_z}
+                        set {Core.teleporting::%arg-1%} to true
+                        set {Core.lastLoc::%sender%} to sender's location
+                        set {_world} to sender's world
+                        set {_loc} to location({_x}, arg-2, {_z}, {_world})
+                        teleport sender to {_loc}
+                        send "{@p} Teleported to {@h}%{_x}%, %arg-2%, %{_z}%{@t}."
+                        wait 1 second
+                        delete {Core.teleporting::%arg-1%}
+                else:
+                    send "{@error} Invalid Argument."
+                    send "&cUsage: /tpcoords [x] [y] [z]"
+            else:
+                send "{@error} Invalid Argument."
+                send "&cUsage: /tpcoords [x] [y] [z]"
+command /sethome:
+    permission: Core.sethome
+    permission message: {@permissionError} [Core.sethome]
+    usage: /sethome
+    trigger:
+        set {Core.home::%sender's uuid%} to sender's location
+        set {_x} to sender's x-coordinate
+        set {_y} to sender's y-coordinate
+        set {_z} to sender's z-coordinate
+        send "{@p} Home set at {@h}%{_x}%, %{_y}%, %{_z}%{@t}."
+command /home:
+    permission: Core.home
+    permission message: {@permissionError} [Core.home]
+    usage: /home
+    trigger:
+        if {Core.home::%sender's uuid%} is set:
+            if {Core.teleporting::%sender%} is true:
+                send "{@error} &cPlayer is already being teleported"
+                stop
+            else:
+                set {Core.teleporting::%sender%} to true
+                set {Core.lastLoc::%sender%} to sender's location
+                teleport sender to {Core.home::%sender's uuid%}
+                send "{@p} Teleported to your home location."
+                wait 1 second
+                delete {Core.teleporting::%sender%}
+        else:
+            send "{@error} &cYou do not have a home set."
+            send "&cUsage: /sethome"
+command /warp [<text>] [<player>]:
+    permission: Core.warp
+    permission message: {@permissionError} [Core.warp]
+    usage: /warp [warpName] (player)
+    trigger:
+        if arg 1 is set:
+            if arg 2 is set:
+                if sender has permission "Core.warp.other":
+                    if "%{Core.warps::*}%" contains "%arg-1%":
+                        if sender has permission "Core.warp.%arg-1%":
+                            set {Core.lastLoc::%player-arg%} to player-arg's location
+                            teleport player-arg to {Core.warpLoc::%arg-1%}
+                            send "{@p} Teleported {@h}%player-arg%{@t} to {@h}%arg-1%{@t}." to sender
+                            send "{@p} Teleported to {@h}%arg-1%{@t}." to player-arg
+                        else:
+                            send "{@error} {@permissionError} [Core.warp.%arg-1%]" to sender
+                    else:
+                        send "{@error} &cWarp &6%arg-1%&c does not exist" to sender
+                else:
+                    send "{@error} {@permissionError}"
+            else:
+                if "%{Core.warps::*}%" contains "%arg-1%":
+                    if sender has permission "Core.warp.%arg-1%":
+                        set {Core.lastLoc::%player%} to player's location
+                        teleport player to {Core.warpLoc::%arg-1%}
+                        send "{@p} Teleported to {@h}%arg-1%{@t}." to player
+                    else:
+                        send "{@error} {@permissionError} [Core.warp.%arg-1%]" to player
+                else:
+                    send "{@error} &cWarp &6%arg-1%&c does not exist" to player
+        else:
+            send "&cUsage: /warp [warpName] (player)"
+        stop
+command /setwarp [<text>]:
+    permission: Core.setwarp
+    permission message: {@permissionError} [Core.setwarp]
+    usage: /setwarp [warpName]
+    aliases: /warpset
+    trigger:
+        if arg 1 is set:
+            if "%arg-1%" contains " " or "," or "." or "::" or ";" or "<" or ">" or "{" or "}" or "(" or ")" or ":" or "-" or "+":
+                send "{@error} &cWarps cannot contain special characters. Use &oA-Z&r&c and &o0-9&r&c."
+                stop
+            else:
+                if "%{Core.warps::*}%" contains "%arg-1%":
+                    if {Core.warpOverwite::%player%} is not set:
+                        send "{@error} &cWarp &6%arg-1%&c already exists. To overwrite, run the command again."
+                        set {Core.warpOverwite::%player%} to true
+                        wait 10 seconds
+                        delete {Core.warpOverwite::%player%}
+                    else:
+                        set {Core.warpLoc::%arg-1%} to player's location
+                        if "%{Core.warps::*}%" does not contain "%arg-1%":
+                            add arg-1 to {Core.warps::*}
+                            send "{@p} Warp {@h}%arg-1%{@t} has been set to your location"
+                        else:
+                            send "{@p} Warp {@h}%arg-1%{@t} has been set to your location"
+                else:
+                    set {Core.warpLoc::%arg-1%} to player's location
+                    if "%{Core.warps::*}%" does not contain "%arg-1%":
+                        add arg-1 to {Core.warps::*}
+                        send "{@p} Warp {@h}%arg-1%{@t} has been set to your location"
+                    else:
+                        send "{@p} Warp {@h}%arg-1%{@t} has been set to your location"
+        else:
+            send "&cUsage: /setwarp [warpName]"
+        stop
+command /delwarp [<text>]:
+    permission: Core.delwarp
+    permission message: {@permissionError} [Core.delwarp]
+    usage: /delwarp [warpName]
+    aliases: /warpdel
+    trigger:
+        if arg 1 is "-c":
+            if player has permission "Core.resetWarps":
+                clear {Core.warps::*}
+                clear {Core.warpLoc::*}
+                send "{@p} All warps cleared"
+            else:
+                send "&cUsage: /delwarp [warpName]"
+        else if arg 1 is set:
+            if "%{Core.warps::*}%" contains "%arg-1%":
+                delete {Core.warpLoc::%arg-1%}
+                remove arg-1 from {Core.warps::*}
+                send "{@p} Warp {@h}%arg-1%{@t} has been deleted"
+            else:
+                send "{@error} &cWarp &6%arg-1%&c does not exist."
+        else:
+            send "&cUsage: /delwarp [warpName]"
+command /warps:
+    permission: Core.warps
+    permission message: {@permissionError} [Core.warps]
+    usage: /warps
+    aliases: /warplist
+    trigger:
+        send "{@p} {@h2}All warps"
+        if "%{Core.warps::*}%" = "<none>":
+            send "   &7▪ &cNo warps set"
+        else:
+            send "   &7▪ &f&o%{Core.warps::*}%"
+        stop
+command /setspawn:
+    permission: Core.setspawn
+    permission message: {@permissionError} [Core.setspawn]
+    usage: /setspawn
+    trigger:
+        set {Core.spawn} to sender's location
+        set {_x} to sender's x-coordinate
+        set {_y} to sender's y-coordinate
+        set {_z} to sender's z-coordinate
+        send "{@p} Spawn location set to {@h}%{_x}%, %{_y}%, %{_z}%{@t}."
+command /spawn [<player=%player%>]:
+    permission: Core.spawn
+    permission message: {@permissionError} [Core.spawn]
+    usage: /spawn (player)
+    trigger:
+        if {Core.spawn} is set:
+            if {Core.teleporting::%arg-1%} is true:
+                send "{@error} &c&oPlayer is already being teleported"
+                stop
+            else:
+                if arg 1 isn't sender:
+                    if sender has permission "Core.spawn.other":
+                        send "{@p} Teleported {@h}%arg-1%{@t} to spawn." to sender
+                    else:
+                        send "{@permissionError} [Core.spawn.other]"
+                set {Core.teleporting::%arg-1%} to true
+                set {Core.lastLoc::%arg-1%} to arg-1's location
+                teleport arg-1 to {Core.spawn}
+                send "{@p} Teleported to spawn." to arg-1
+                wait 1 second
+                delete {Core.teleporting::%arg-1%}
+        else:
+            send "{@error} Spawn is not set."
+            if sender has permission "Core.setspawn":
+                send "&cUsage: /setspawn"
+#command /effect [<text>] [<text>] [<integer>] [<integer>]:
+#    permission: Core.effect
+#    permission message: {@permissionError}
+#    usage: &c/effect
+#    description: Apply potion effects to a player
+#    trigger:
+#        if arg 1 is not set:
+#            send "&cUsage: /effect [player] [effect] [time] (tier)"
+#        if arg 1 is "all" or "*":
+#            if player has permission "Core.effect.all":
+#                if arg 2 is set:
+#                    if arg 3 is set:
+#                        if arg 4 is set:
+#                            loop all players:
+#                                apply (arg-2) (arg-4) to loop-player for (arg-3) seconds
+#                            send "{@p} Applied {@h}%arg-2% %arg-3%{@t} to all players for {@h}%arg-4% seconds{@t}."
+#                        else:
+#                            loop all players:
+#                                apply (arg-2) to loop-player for (arg-3) seconds
+#                            send "{@p} Applied {@h}%arg-2%{@t} to all players for {@h}%arg-4% seconds{@t}."
+#                    else:
+#                        send "&cUsage: /effect %arg-1% %arg-2% [time] (tier)"
+#                else:
+#                    send "&cUsage: /effect %arg-1% [effect] [time] (tier)"
+#            else:
+#                send "&cInsufficient permissions."
+#        else if arg 1 is set:
+#            if arg 2 is set:
+#                if arg 3 is set:
+#                    if arg 4 is set:
+#                        apply (arg-2) (arg-4) to (arg-1) for (arg-3) seconds
+#                        send "{@p} Applied {@h}%arg-2% %arg-3%{@t} to {@h2}%arg-1% for {@h}%arg-4% seconds{@t}."
+command /gmc [<player=%player%>]:
+    permission: Core.gm
+    permission message: {@permissionError} [Core.gm]
+    usage: &c/gmc (player)
+    description: Changes gamemode to Creative
+    trigger:
+        if player-arg is sender:
+            set player-arg's gamemode to creative
+            send "{@p} Your gamemode has been updated to {@h}Creative{@t}." to player-arg
+        else:
+            if player has permission "Core.gm.other":
+                set player-arg's gamemode to creative
+                send "{@p} Your gamemode has been updated to {@h}Creative{@t}." to player-arg
+                send "{@p} {@h}%player-arg%{@t}'s gamemode was updated to {@h}Creative{@t}" to sender
+            else:
+                send "{@error} {@permissionError} [Core.gm.other]"
+command /gms [<player=%player%>]:
+    permission: Core.gm
+    permission message: {@permissionError} [Core.gm]
+    usage: &c/gms (player)
+    description: Changes gamemode to Survival
+    trigger:
+        if player-arg is sender:
+            set player-arg's gamemode to Survival
+            send "{@p} Your gamemode has been updated to {@h}Survival{@t}." to player-arg
+        else:
+            if player has permission "Core.gm.other":
+                set player-arg's gamemode to Survival
+                send "{@p} Your gamemode has been updated to {@h}Survival{@t}." to player-arg
+                send "{@p} {@h}%player-arg%{@t}'s gamemode was updated to {@h}Survival{@t}" to sender
+            else:
+                send "{@error} {@permissionError} [Core.gm.other]"
+command /gma [<player=%player%>]:
+    permission: Core.gm
+    permission message: {@permissionError} [Core.gm]
+    usage: &c/gma (player)
+    description: Changes gamemode to Adventure
+    trigger:
+        if player-arg is sender:
+            set player-arg's gamemode to Adventure
+            send "{@p} Your gamemode has been updated to {@h}Adventure{@t}." to player-arg
+        else:
+            if player has permission "Core.gm.other":
+                set player-arg's gamemode to Adventure
+                send "{@p} Your gamemode has been updated to {@h}Adventure{@t}." to player-arg
+                send "{@p} {@h}%player-arg%{@t}'s gamemode was updated to {@h}Adventure{@t}" to sender
+            else:
+                send "{@error} {@permissionError} [Core.gm.other]"
+command /gmsp [<player=%player%>]:
+    permission: Core.gm
+    permission message: {@permissionError} [Core.gm]
+    usage: &c/gmsp (player)
+    description: Changes gamemode to Spectator
+    trigger:
+        if "%minecraft version%" contains "1.7":
+            send "{@error} Your server does not support &6Spectator Mode&c. &8&o[%minecraft version%]"
+        else:
+            if player-arg is sender:
+                set player-arg's gamemode to Spectator
+                send "{@p} Your gamemode has been updated to {@h}Spectator{@t}." to player-arg
+            else:
+                if player has permission "Core.gm.other":
+                    set player-arg's gamemode to Spectator
+                    send "{@p} Your gamemode has been updated to {@h}Spectator{@t}." to player-arg
+                    send "{@p} {@h}%player-arg%{@t}'s gamemode was updated to {@h}Spectator{@t}" to sender
+                else:
+                    send "{@error} {@permissionError} [Core.gm.other]"
+on join:
+    if "{@customConnectMessages}" = "true":
+        set join message to "{@joinMessage}"
+    else if "{@customConnectMessages}" = "none":
+        set join message to ""
+    delete {Core.visibility::%event-player%}
+    delete {Core.fly::%event-player%}
+    remove invisibility from the event-player
+    {Core.maxHealth} is set:
+        set event-player's max health to {Core.maxHealth}
+    event-player is op:
+        {ion.updates} = "updatesAvaliable":
+            send "&6[&l!!!&6] &7New version of &e&lION&7 is avaliable!"
+            jsonCore("%event-player%", "&6[&l!!!&6] &7Click ||{@h2}&nhere||ttp:&e&lION PROJECT%nl%&7Link {@h2}&nhttp://ion.vexio.us/downloads %nl%&r%nl%&8&o[Click to open url]||url:http://ion.vexio.us/downloads ||&7to download the latest verion.")
+    {@spawnJoin} = true:
+        teleport event-player to {Core.spawn}
+on quit:
+    if "{@customConnectMessages}" = "true":
+        set leave message to "{@quitMessage}"
+    else if "{@customConnectMessages}" = "none":
+        set leave message to ""
+    delete {Core.teleporting::%event-player%}
+    clear {Core.tpRequest::%event-player%::*}
+command /top:
+    permission: Core.top
+    permission message: {@permissionError} [Core.top]
+    usage: &c/top
+    description: Teleports you up to the highest point above you
+    trigger:
+        set {_loc} to location of block at player
+        set y-coordinate of {_loc} to 256
+        set {_n} to 0
+        loop 255 times:
+            set {_n} to {_n}+1
+            block {_n} below block at {_loc} is not air
+            set {_n} to {_n}-1
+            teleport player to block {_n} below block at {_loc}
+            send "{@p} Teleported to top."
+            stop
+command /speed [<number>] [<player=%player%>]:
+    permission: Core.speed
+    permission message: {@permissionError} [Core.speed]
+    usage: &c/speed [0-10] (player)
+    description: Changes walk/flight speed
+    trigger:
+        if arg 1 isn't set:
+            send "&cUsage: /speed [0-10] (player)"
+        else:
+            if arg 1 is between 1 and 10:
+                set {_speed} to arg-1 / 10
+                if player-arg is flying:
+                    if player-arg isn't sender:
+                        send "{@p} {@h}%player-arg%'s{@t} flight speed was set to {@h}%arg-1%{@t}."
+                    send "{@p} Your flight speed was set to {@h}%arg-1%{@t}." to player-arg
+                    set the player-arg's fly speed to {_speed}
+                else:
+                    send "{@p} {@h}%player-arg%'s{@t} walk speed was set to {@h}%arg-1%{@t}."
+                    send "{@p} Your walk speed was set to {@h}%arg-1%{@t}." to player-arg
+                    set the player-arg's walk speed to {_speed}
+            else if arg 1 is greater than 10:
+                send "{@error} &cToo large of a number."
+                send "&cUsage: /speed [0-10] (player)"
+            else:
+                if player-arg is flying:
+                    if player-arg isn't sender:
+                        send "{@p} {@h}%player-arg%'s{@t} flight speed was {@h}reset{@t}."
+                    send "{@p} Your flight speed was {@h}reset{@t}." to player-arg
+                    reset the player-arg's fly speed
+                else:
+                    if player-arg isn't sender:
+                        send "{@p} {@h}%player-arg%'s{@t} flight speed was {@h}reset{@t}."
+                    send "{@p} Your walk speed was {@h}reset{@t}." to player-arg
+                    reset the player-arg's walk speed
+command /blacklist [<text>] [<offline player>]:
+    permission: Core.blacklist
+    permission message: {@permissionError} [Core.blacklist]
+    usage: &c/blacklist [add|remove|list|reset] (player)
+    description: Blacklists people to the server
+    trigger:
+        if arg 1 is "add" or "+":
+            if arg 2 is set:
+                send "{@p} {@h}%offline player-arg%{@t} has been added to the &8blacklist{@t}."
+                add "%offline player-arg%" to {Core.blacklist::*}
+            else:
+                send "{@error} &cSpecify a player"
+                send "&cUsage: /blacklist %arg-1% (player)"
+        else if arg 1 is "remove" or "delete" or "-":
+            if arg 2 is set:
+                if "%{Core.blacklist::*}%" contains "%offline player-arg%":
+                    send "{@p} {@h}%offline player-arg%{@t} has been removed from the &8blacklist{@t}."
+                    remove "%offline player-arg%" from {Core.blacklist::*}
+                else:
+                    send "{@error} &cThat player is not on the blacklist"
+                    send "&cUsage: /blacklist %arg-1% &m%arg-2%"
+            else:
+                send "{@error} &cSpecify a player"
+                send "&cUsage: /blacklist %arg-1% (player)"
+        else if arg 1 is "list":
+            send "{@p} &8Blacklist&7:"
+            loop {Core.blacklist::*}:
+                send "  &7- {@h2}%loop-value%"
+            stop
+        else if arg 1 is "reset":
+            if sender has permission "Core.blacklist.reset":
+                delete {Core.blacklist::*}
+                send "{@p} &8Blacklist{@t} cleared."
+            else:
+                send "{@error} {@permissionError} [Core.blacklist.reset]"
+        else if arg 1 is "on":
+            set {Core.blacklist} to true
+            send "{@p} Blacklist enabled."
+        else if arg 1 is "off":
+            set {Core.blacklist} to false
+            send "{@p} Blacklist disabled."
+        else:
+            send "&cUsage: /blacklist [add|remove|list|reset] (player)"
+        stop
+on connect:
+    if {Core.whitelist} is true:
+        if "%{Core.whitelist::*}%" doesn't contain "%event-player%":
+            kick event-player due to "&7You are not &fWhitelisted &7on this server."
+            stop
+        else if "%{Core.blacklist::*}%" contains "%event-player%":
+            if {Core.blacklist} is true:
+                kick event-player due to "&7You are &8Blacklisted&7 on this server."
+                stop
+    else if {Core.blacklist} is true:
+        if "%{Core.blacklist::*}%" contains "%event-player%":
+            kick event-player due to "&7You are &8Blacklisted&7 on this server."
+            stop
+command /whitelist [<text>] [<offline player>]:
+    permission: Core.whitelist
+    permission message: {@permissionError} [Core.whitelist]
+    usage: &c/whitelist [add|remove|list|reset] (player)
+    description: Whitelists people to the server
+    trigger:
+        if arg 1 is "add" or "+":
+            if arg 2 is set:
+                send "{@p} {@h}%offline player-arg%{@t} has been added to the &7Whitelist{@t}."
+                add "%offline player-arg%" to {Core.whitelist::*}
+            else:
+                send "{@error} &cSpecify a player"
+                send "&cUsage: /whitelist %arg-1% (player)"
+        else if arg 1 is "remove" or "delete" or "-":
+            if arg 2 is set:
+                if "%{Core.whitelist::*}%" contains "%offline player-arg%":
+                    send "{@p} {@h}%offline player-arg%{@t} has been removed from the &7Whitelist{@t}."
+                    remove "%offline player-arg%" from {Core.whitelist::*}
+                else:
+                    send "{@error} &cThat player is not on the whitelist"
+                    send "&cUsage: /whitelist %arg-1% &m%arg-2%"
+            else:
+                send "{@error} &cSpecify a player"
+                send "&cUsage: /whitelist %arg-1% (player)"
+        else if arg 1 is "list":
+            send "{@p} &7Whitelist&7:"
+            loop {Core.whitelist::*}:
+                send "  &7- {@h2}%loop-value%"
+            stop
+        else if arg 1 is "reset":
+            if sender has permission "Core.whitelist.reset":
+                delete {Core.whitelist::*}
+                send "{@p} Whitelist cleared."
+            else:
+                send "{@error} {@permissionError} [Core.whitelist.reset]"
+        else if arg 1 is "on":
+            set {Core.whitelist} to true
+            send "{@p} Whitelist enabled."
+        else if arg 1 is "off":
+            set {Core.whitelist} to false
+            send "{@p} Whitelist disabled."
+        else:
+            send "&cUsage: /whitelist [add|remove|list|reset] (player)"
+        stop
+command /time [<text>]:
+    permission: Core.time
+    permission message: {@permissionError} [Core.time]
+    usage: &c/time [set] [day|night|noon|midnight|...]
+    description: Sets the time of day
+    aliases: /Core:time
+    trigger:
+        if arg 1 is "day":
+            set time to 9:00am
+            send "{@p} Time set to {@h}Day{@t}, or {@h2}9:00am{@t}."
+        else if arg 1 is "noon":
+            set time to 12:00pm
+            send "{@p} Time set to {@h}Noon{@t}, or {@h2}12:00pm{@t}."
+        else if arg 1 is "night":
+            set time to 9:00pm
+            send "{@p} Time set to {@h}Night{@t}, or {@h2}9:00pm{@t}."
+        else if arg 1 is "midnight":
+            set time to 12:00am
+            send "{@p} Time set to {@h}Midnight{@t}, or {@h2}12:00am{@t}."
+        else if arg 1 is "dawn":
+            set time to 5:00am
+            send "{@p} Time set to {@h}Dawn{@t}, or {@h2}5:00am{@t}."
+        else if arg 1 is "dusk":
+            set time to 7:00pm
+            send "{@p} Time set to {@h}Dusk{@t}, or {@h2}7:00pm{@t}."
+        else:
+            send "{@p} Current Time: &a%time in sender's world%"
+command /day:
+    permission: Core.time
+    permission message: {@permissionError} [Core.time]
+    description: Sets the time of day
+    trigger:
+        player command "/time day"
+command /night:
+    permission: Core.time
+    permission message: {@permissionError} [Core.time]
+    description: Sets the time of day
+    trigger:
+        player command "/time night"
+command /weather [<text>]:
+    permission: Core.weather
+    permission message: {@permissionError} [Core.weather]
+    usage: &c/weather [sun|rain|thunder]
+    description: Sets the worlds weather
+    trigger:
+        if arg 1 is "sun" or "clear":
+            set weather to clear
+            send "{@p} Weather set to {@h}Sun{@t}."
+        else if arg 1 is "rain":
+            set weather to rain
+            send "{@p} Weather set to {@h}Rain{@t}."
+        else if arg 1 is "thunder" or "lightning":
+            set weather to thunder
+            send "{@p} Weather set to {@h}Thunder{@t}."
+        else:
+            send "&cUsage: /weather [sun|rain|thunder]"
+on weather change:
+    if {Core.permWeather} is true:
+        cancel event
+command /sun:
+    permission: Core.weather
+    permission message: {@permissionError} [Core.weather]
+    description: Sets the worlds weather
+    trigger:
+        player command "/weather sun"
+command /rain:
+    permission: Core.weather
+    permission message: {@permissionError} [Core.weather]
+    description: Sets the worlds weather
+    trigger:
+        player command "/weather rain"
+command /thunder:
+    permission: Core.weather
+    permission message: {@permissionError} [Core.weather]
+    description: Sets the worlds weather
+    trigger:
+        player command "/weather thunder"
+command /head [<text="%player%">]:
+    permission: Core.head
+    permission message: {@permissionError} [Core.head]
+    usage: &c/head [player]
+    description: Gives a player head
+    aliases: /skull, /playerhead
+    trigger:
+        set {_head} to arg-1 parsed as offline player
+        give {_head}'s skull named "{@h2}Player Head" with lore "&7Skull Owner: &f%arg-1%" to player
+        send "{@p} Given {@h}%arg-1%{@t}'s Head."
+command /clear [<player=%player%>]:
+    permission: Core.clear
+    permission message: {@permissionError} [Core.clear]
+    usage: &c/clear [player]
+    description: Clears inventory
+    aliases: /ci, /clearinventory
+    trigger:
+        if arg 1 isn't sender:
+            if sender has permission "Core.clear.other":
+                send "{@p} Cleared {@h}%player-arg%'s{@t} inventory{@t}."
+            else:
+                send "{@error} {@permissionError} [Core.clear.other]"
+        clear player-arg's inventory
+        send "{@p} Your inventory has been cleared{@t}." to player-arg
+command /heal [<player=%player%>]:
+    permission: Core.heal
+    permission message: {@permissionError} [Core.heal]
+    usage: &c/clear [player]
+    description: Heals to full health
+    trigger:
+        if sender isn't arg 1:
+            if sender doesn't have permission "Core.heal.other":
+                send "{@error} {@permissionError} [Core.heal.other]"
+            else:
+                send "{@p} Healed {@h}%player-arg%{@t}."
+        heal player-arg
+        send "{@p} You have been healed." to player-arg
+on command "/heal *":
+    cancel event
+    if player has permission "Core.heal.all":
+        loop all players:
+            heal loop-player
+        send "{@p} Healed all players"
+    else:
+        send "{@error} {@permissionError} [Core.heal.all]"
+on command "/feed *":
+    cancel event
+    if player has permission "Core.feed.all":
+        loop all players:
+            set the loop-player's food level to 20
+            apply saturation 2 to loop-player for 10 seconds
+        send "{@p} Nourished all players"
+    else:
+        send "{@error} {@permissionError} [Core.feed.all]"
+command /feed [<player=%player%>]:
+    permission: Core.feed
+    permission message: {@permissionError} [Core.feed]
+    usage: &c/feed [player]
+    description: Feeds to full hunger
+    trigger:
+        if sender isn't arg 1:
+            if sender doesn't have permission "Core.feed.other":
+                send "{@error} {@permissionError} [Core.feed.other]"
+            else:
+                send "{@p} Nourished {@h}%player-arg%{@t}."
+        set the player-arg's food level to 20
+        apply saturation 2 to player-arg for 10 seconds
+        send "{@p} You have been nourished." to player-arg
+command /maxhealth [<integer>]:
+    permission: Core.maxhealth
+    permission message: {@permissionError} [Core.maxhealth]
+    usage: &c/maxhealth [number]
+    description: Sets maximum health, goes by hearts.
+    trigger:
+        if arg 1 is not set:
+            send "&cUsage: /maxhealth [1-100|0=reset]"
+        else if arg 1 is less than or equal to 0:
+            set {Core.maxHealth} to 10
+            loop all players:
+                set max health of loop-player to {Core.maxHealth}
+            send "{@p} Maximum health has been set to {@h2}%{Core.maxHealth}% Hearts{@t}."
+        else if arg 1 is greater than 100:
+            send "{@error} Too high of a number!"
+            send "&cUsage: /maxhealth [1-100|0=reset]"
+        else:
+            set {Core.maxHealth} to arg-1
+            loop all players:
+                set max health of loop-player to {Core.maxHealth}
+            send "{@p} Maximum health has been set to {@h2}%{Core.maxHealth}% Hearts{@t}."
+command /rename [<text>]:
+    permission: Core.rename
+    permission message: {@permissionError} [Core.rename]
+    usage: &c/rename [name]
+    description: Renames held item
+    trigger:
+        if arg 1 is set:
+            if player's tool is nothing:
+                send "&cYou can't rename nothing!"
+            else:
+                set player's held item's name to "%colored arg-1%"
+                send "{@p} Renamed &n%player's held item%&r to {@h}%colored arg-1%{@t}."
+        else:
+            send "&cUsage: /rename [name]"
+on sign change:
+    if player has permission "Core.coloredsign":
+        set line 1 to "%colored line 1%"
+        set line 2 to "%colored line 2%"
+        set line 3 to "%colored line 3%"
+        set line 4 to "%colored line 4%"
+command /back:
+    permission: Core.back
+    permission message: {@permissionError} [Core.back]
+    usage: &c/back
+    description: Teleports to last location
+    trigger:
+        if {Core.lastLoc::%sender%} is set:
+            set {_lastLoc} to sender's location
+            teleport sender to {Core.lastLoc::%sender%}
+            set {Core.lastLoc::%sender%} to {_lastLoc}
+            send "{@p} Teleported to previous location."
+        else:
+            send "{@error} &cYou have no previous location!"
+command /killall [<text>] [<text="-a">]:
+    permission: Core.killall
+    permission message: {@permissionError} [Core.killall]
+    usage: &c/killall [...]
+    description: Kills specified or all entities
+    trigger:
+        if arg 1 = "animals" or "passive":
+            set {Core.entityDrops::%sender's world%} to false
+            kill all pigs in sender's world
+            kill all cows in sender's world
+            kill all bats in sender's world
+            kill all chickens in sender's world
+            kill all sheeps in sender's world
+            kill all squids in sender's world
+            kill all villagers in sender's world
+            kill all wolves in sender's world
+            kill all ocelots in sender's world
+            kill all rabbits in sender's world
+            kill all horses in sender's world
+            kill all iron golems in sender's world
+            kill all snow golems in sender's world
+            if arg 2 is not "-s":
+                send "{@p} Killed all {@h}Animals{@t}."
+            delete {Core.entityDrops::%sender's world%}
+        else if arg 1 = "monsters" or "hostiles":
+            set {Core.entityDrops::%sender's world%} to false
+            kill all zombies in sender's world
+            kill all skeletons in sender's world
+            kill all slimes in sender's world
+            kill all blazes in sender's world
+            kill all guardians in sender's world
+            kill all spiders in sender's world
+            kill all endermen in sender's world
+            kill all creepers in sender's world
+            kill all ghasts in sender's world
+            kill all silverfishes in sender's world
+            kill all witches in sender's world
+            kill all enderdragons in sender's world
+            kill all withers in sender's world
+            if arg 2 is not "-s":
+                send "{@p} Killed all {@h}Monsters{@t}."
+            delete {Core.entityDrops::%sender's world%}
+        else if arg 1 = "all" or "*":
+            player command "/killall animals -s"
+            player command "/killall monsters -s"
+            send "{@p} Killed all entities."
+on item spawn:
+    if {Core.entityDrops::%entity's world%} is false:
+        cancel event
+command /message [<player>] [<text>]:
+    permission: Core.message
+    permission message: {@permissionError} [Core.message]
+    description: Sends a private message to a player
+    aliases: /msg, /whisper, /w
+    trigger:
+        if arg 1 is set:
+            if arg 2 is set:
+                if player-arg is online:
+                    set {Core.msgReply::%player-arg%} to sender
+                    send "&8[&6You &7» &6%player-arg%&8] &f&o%arg-2%" to sender
+                    send "&8[&6%sender% &7» &6You&8] &f&o%arg-2%" to player-arg
+                else:
+                    send "{@error} &c%player-arg% is not online"
+            else:
+                send "&cUsage: /message %arg-1% [message]"
+        else:
+            send "&cUsage: /message [player] [message]"
+command /reply [<text>]:
+    permission: Core.message.reply
+    permission message: {@permissionError} [Core.message.reply]
+    description: Replies to last messanger
+    aliases: /r
+    trigger:
+        if {Core.msgReply::%sender%} is set:
+            if arg 1 is set:
+                player command "/message %{Core.msgReply::%sender%}% %arg-1%"
+            else:
+                send "&cUsage: /reply [message]"
+        else:
+            send "{@error} &cYou have no-one to reply to. :("
+command /xp [<text>] [<text>] [<integer>] [<player=%sender%>]:
+    permission: Core.xp
+    permission message: {@permissionError}
+    description: Manages experience
+    aliases: /experience, /exp
+    trigger:
+        if arg 1 = "add" or "+":
+            if arg 2 = "level" or "l":
+                if arg 3 is set:
+                    set {_p} to arg-4
+                    increase {_p}'s level by (arg-3)
+                    sender = {_p}:
+                        send "{@p} Added {@h}%arg-3% Level(s){@t} to your experience."
+                        stop
+                    send "{@p} Added {@h}%arg-3% Level(s){@t} to {@h}%arg-4%{@t}'s experience."
+                else:
+                    send "{@error} Usage: /xp [add|remove|set] [level|point] [amount] (player)"
+                    send "{@error} Usage: /xp [clear] (@a)"
+            else if arg 2 = "point" or "p":
+                if arg 3 is set:
+                    set {_p} to arg-4
+                    add (arg-3) to {_p}'s xp
+                    sender = {_p}:
+                        send "{@p} Added {@h}%arg-3% Points(s){@t} to your experience."
+                        stop
+                    send "{@p} Added {@h}%arg-3% Points(s){@t} to {@h}%arg-4%{@t}'s experience."
+            else:
+                send "{@error} Usage: /xp [add|remove|set] [level|point] [amount] (player)"
+                send "{@error} Usage: /xp [clear] (@a)"
+        else if arg 1 = "remove" or "-":
+            if arg 2 = "level" or "l":
+                if arg 3 is set:
+                    set {_p} to arg-4
+                    reduce {_p}'s level by (arg-3)
+                    sender = {_p}:
+                        send "{@p} Removed {@h}%arg-3% Level(s){@t} from your experience."
+                        stop
+                    send "{@p} Removed {@h}%arg-3% Level(s){@t} from {@h}%arg-4%{@t}'s experience."
+                else:
+                    send "{@error} Usage: /xp [add|remove|set] [level|point] [amount] (player)"
+                    send "{@error} Usage: /xp [clear] (@a)"
+            else if arg 2 = "point" or "p":
+                if arg 3 is set:
+                    set {_p} to arg-4
+                    remove (arg-3) from {_p}'s xp
+                    sender = {_p}:
+                        send "{@p} Removed {@h}%arg-3% Points(s){@t} from your experience."
+                        stop
+                    send "{@p} Removed {@h}%arg-3% Points(s){@t} from {@h}%arg-4%{@t}'s experience."
+                else:
+                    send "{@error} Usage: /xp [add|remove|set] [level|point] [amount] (player)"
+                    send "{@error} Usage: /xp [clear] (@a)"
+            else:
+                send "{@error} Usage: /xp [add|remove|set] [level|point] [amount] (player)"
+                send "{@error} Usage: /xp [clear] (@a)"
+        else if arg 1 = "set":
+            if arg 2 = "level" or "l":
+                if arg 3 is set:
+                    set {_p} to arg-4
+                    set {_p}'s level to (arg-3)
+                    sender = {_p}:
+                        send "{@p} Set your experience level to {@h}%arg-3%{@t}."
+                        stop
+                    send "{@p} Set {@h}%arg-4%'s{@t} experience level to {@h}%arg-3%{@t}"
+                else:
+                    send "{@error} Usage: /xp [add|remove|set] [level|point] [amount] (player)"
+                    send "{@error} Usage: /xp [clear] (@a)"
+            else if arg 2 = "point" or "p":
+                if arg 3 is set:
+                    set {_p} to arg-4
+                    set {_p}'s xp to (arg-3)
+                    sender = {_p}:
+                        send "{@p} Set your experience point to {@h}%arg-3%{@t}."
+                        stop
+                    send "{@p} Set {@h}%arg-4%'s{@t} experience point to {@h}%arg-3%{@t}"
+                else:
+                    send "{@error} Usage: /xp [add|remove|set] [level|point] [amount] (player)"
+                    send "{@error} Usage: /xp [clear] (@a)"
+            else:
+                send "{@error} Usage: /xp [add|remove|set] [level|point] [amount] (player)"
+                send "{@error} Usage: /xp [clear] (@a)"
+        else if arg 1 = "clear":
+            if arg 2 = "all" or "@a" or "*":
+                loop all players:
+                    remove 999999999 from xp of loop-player
+                send "{@p} Cleared all player's experience."
+            else:
+                remove 999999999 from xp of sender
+                send "{@p} Cleared your expierence."
+        else:
+            send "{@error} Usage: /xp [add|remove|set] [level|point] [amount] (player)"
+            send "{@error} Usage: /xp [clear] (@a)"
+command /give [<player>] [<text>] [<integer=1>]:
+    permission: Core.give
+    permission message: {@permissionError} [Core.give]
+    aliases: /giveitem, /g
+    usage: /give [player] [item] (amount)
+    description: Give a player an item
+    trigger:
+        if arg 1 is set:
+            if arg 2 is set:
+                set {_item} to "%arg-2%"
+                replace all "_" with " " in {_item}
+                set {_item} to "%{_item}%" parsed as item
+                if {_item} is an item:
+                    set {_amount} to arg-3
+                    loop {_amount} times:
+                        give {_item} to player-arg
+                    if sender is player-arg:
+                        send "{@p} Recieved {@h2}%{_amount}%x %{_item}%{@t}." to player-arg
+                    else:
+                        send "{@p} Given {@h2}%{_amount}%x %{_item}%{@t} to {@h}%player-arg%{@t}."
+                else:
+                    send "{@error} &6%{_item}% &cis not an item"
+                    if arg 3 > 1:
+                        send "&cUsage: /give %arg-1% &m%arg-2%&c&r %arg-3%"
+                    else:
+                        send "&cUsage: /give %arg-1% &m%arg-2%&c&r (amount)"
+            else:
+                send "&cUsage: /give %arg-1% [item] (amount)"
+        else:
+            send "&cUsage: /give [player] [item] (amount)"
+command /item [<text>]:
+    permission: Core.item
+    permission message: {@permissionError} [Core.item]
+    usage: /item [item] (amount)
+    aliases: /i
+    description: Gives an item to sender
+    trigger:
+        if arg 1 is set:
+            player command "/give %sender% %arg 1%"
+        else:
+            send "&cUsage: /item [item] (amount)"
+command /iteminfo [<item=%tool of player%>]:
+    permission: Core.iteminfo
+    permission message: {@permissionError} [Core.itemInfo]
+    usage: /iteminfo (item)
+    aliases: /itemdb
+    description: Displays information of player's held item or specified item
+    trigger:
+        set {_lore} to lore of arg 1
+        replace all "||" in {_lore} with "%nl%"
+        replace all "<none>" in {_lore} with ""
+        set {_name} to name of arg-1
+        if "%{_name}%" is "<none>":
+            set {_name} to "%type of arg 1%"
+        jsonCore("%player%", "{@p} Item Information: ||{@h2}%type of arg-1%||ttp:%{_name}%%nl%%{_lore}%|| {@h2}(ID: %id of arg-1%:%data value of arg-1%)")
+command /lore [<integer>] [<text>]:
+    permission: Core.lore
+    permission message: {@permissionError} [Core.lore]
+    usage: /lore [lineNumber] [...]
+    aliases: /setlore
+    description: Sets a line of player's held item's lore to a text
+    trigger:
+        if player's tool is nothing:
+            send "{@error} You must be holding an item."
+        else:
+            if arg 1 is set:
+                if arg 2 is set:
+                    set line (arg-1) of lore of player's held item to "%colored arg-2%"
+                    send "{@p} Set {@h}Lore Line %arg-1%{@t} to &r%colored arg-2%&r{@t}."
+                else:
+                    clear line (arg-1) of lore of player's held item
+                    send "{@p} Removed {@h}Lore Line %arg-1%{@t}."
+            else:
+                send "&cUsage: /setlore [lineNumber] [...]"
+command /broadcast [<text>]:
+    permission: Core.lore
+    permission message: {@permissionError} [Core.broadcast]
+    usage: /broadcast [text]
+    aliases: /alert, /bc
+    description: Sends a message to the whole Server
+    trigger:
+        if arg 1 is set:
+            broadcast "{@alert} %colored arg 1%"
+        else:
+            send "&cUsage: /broadcast [text]"
+command /list:
+    permission: Core.list
+    permission message: {@permissionError} [Core.list]
+    usage: /list
+    aliases: /staff, /online
+    description: Displays a list of the online players
+    trigger:
+        loop all players:
+            if loop-player has permission "Core.staff":
+                add "%loop-player%" to {_staff::*}
+            else:
+                add "%loop-player%" to {_players::*}
+        set {_staff} to "%{_staff::*}%"
+        replace all " and " in {_staff} with ", "
+        if {_staff} isn't "<none>":
+            send "{@p} Online Staff: {@h2}%{_staff}%"
+        set {_players} to "%{_players::*}%"
+        replace all " and " in {_players} with ", "
+        if {_players} isn't "<none>":
+            send "{@p} Online Players: {@h2}%{_players}%"
+command /giveall [<text>] [<integer=1>]:
+    permission: Core.give.all
+    permission message: {@permissionError} [Core.give.all]
+    usage: /giveall [item] (amount)
+    description: Give all players an item
+    trigger:
+        if arg 1 is set:
+            set {_item} to "%arg-1%"
+            replace all "_" with " " in {_item}
+            set {_item} to "%{_item}%" parsed as item
+            if {_item} is an item:
+                if arg 2 is set:
+                    set {_amount} to arg-2
+                    loop all players:
+                        loop {_amount} times:
+                            give {_item} to loop-player
+                        if sender is not loop-player:
+                            send "{@p} Recieved {@h2}%{_amount}%x %{_item}%{@t}." to loop-player
+                    send "{@p} Given {@h2}%{_amount}%x %{_item}%{@t} to {@h}all players{@t}." to sender
+            else:
+                send "{@error} &6%{_item}% &cis not an item"
+                send "&cUsage: /giveall &m%arg-1%&c&r %arg-2%"
+        else:
+            send "&cUsage: /giveall [item] (amount)"
+command /powertool [<text>] [<text="clear">]:
+    permission: Core.powertool
+    permission message: {@permissionError} [Core.powertool]
+    usage: /powertool [left|right(click)] [command|clear]
+    description: Bind a command to your tool
+    aliases: /pt
+    trigger:
+        if player's tool is nothing:
+            send "{@error} &cYou can't rename nothing!"
+        else:
+            if arg 1 is "left" or "leftclick":
+                if arg 2 is "clear":
+                    delete {Core.powerTool-left::%sender's tool%::%sender%}
+                    send "{@p} Unbound Powertool command from {@h}Left-Click{@t} action."
+                else:
+                    set {Core.powerTool-left::%sender's tool%::%sender%} to "%arg-2%"
+                    send "{@p} Bound {@h2}`%arg-2%`{@t} to {@h}Left-Click{@t} action."
+            else if arg 1 is "right" or "rightclick":
+                if arg 2 is "clear":
+                    delete {Core.powerTool-right::%sender's tool%::%sender%}
+                    send "{@p} Unbound Powertool command from {@h}Right-Click{@t} action."
+                else:
+                    set {Core.powerTool-right::%sender's tool%::%sender%} to "%arg-2%"
+                    send "{@p} Bound {@h2}`%arg-2%`{@t} to {@h}Right-Click{@t} action."
+            else if arg 1 is "clear":
+                delete {Core.powerTool-right::%sender's tool%::%sender%}
+                delete {Core.powerTool-left::%sender's tool%::%sender%}
+                send "{@p} Unbound Powertool commands from {@h}Left-Click{@t} and {@h}Right-Click{@t} action."
+            else:
+                send "&cUsage: /powertool [left|right(click)|clear] [command|clear]"
+on left click:
+    player has permission "Core.powertool":
+        if {Core.powerTool-left::%sender's tool%::%sender%} is set:
+            make player execute command "%{Core.powerTool-left::%sender's tool%::%sender%}%"
+on right click:
+    player has permission "Core.powertool":
+        if {Core.powerTool-right::%sender's tool%::%sender%} is set:
+            make player execute command "%{Core.powerTool-right::%sender's tool%::%sender%}%"
+command /invsee [<player>]:
+    permission: Core.invsee
+    permission message: {@permissionError} [Core.invsee]
+    aliases: /inventorysee, /viewinventory, /viewinv
+    description: View & edit a player's inventory
+    trigger:
+        if arg 1 is set:
+            open the player-arg's inventory to sender
+            send "{@p} Viewing {@h}%player-arg%'s{@t} inventory."
+        else:
+            send "&cUsage: /invsee [player]"
+command /invshow [<player>]:
+    permission: Core.invshow
+    permission message: {@permissionError} [Core.invshow]
+    aliases: /inventoryshow, /showinventory, /showinv
+    description: View a player's inventory
+    trigger:
+        if arg 1 is set:
+            set {_armor::head} to player-arg's helmet
+            set {_armor::chest} to player-arg's chestplate
+            set {_armor::legs} to player-arg's leggings
+            set {_armor::boots} to player-arg's boots
+            set {_health} to "%health of player-arg * 10%" parsed as integer
+            set {_maxHealth} to "%max health of player-arg%" parsed as integer
+            if {_maxHealth} > 10:
+                set {_mh} to {_maxHealth}
+                set {_mh} to {_mh} / 10
+                set {_health} to {_health} / {_mh}
+            set {_n} to 0
+            loop 36 times:
+                set {_inventory.%player-arg%::%loop-num%} to slot loop-num - 1 of player's inventory
+            set {_inventory::*} to player-arg's inventory
+            send "{@p} Showing {@h}%player-arg%'s{@t} inventory."
+            open chest with 6 rows named "%player-arg%'s Inventory" to sender
+            wait 2 ticks
+            format slot 4 of sender with black stained glass pane named "&r" to be unstealable
+            set {_n} to 9
+            loop 9 times:
+                format slot ({_n}) of sender with black stained glass pane named "&r" to be unstealable
+                add 1 to {_n}
+            format slot 0 of sender with {_armor::head} to be unstealable
+            format slot 1 of sender with {_armor::chest} to be unstealable
+            format slot 2 of sender with {_armor::legs} to be unstealable
+            format slot 3 of sender with {_armor::boots} to be unstealable
+            format slot 5 of sender with cake item named "&c&nHealth" with lore "&8Information|| &8▪ {@h2}Health &e%{_health}%%%|| &8▪ {@h2}Max Health &e%{_maxHealth}%" to be unstealable
+            format slot 6 of sender with steak named "&c&nHunger" with lore "&8Information|| &8▪ {@h2}Food &e%player's food level%/10" to be unstealable
+            format slot 7 of sender with water bottle named "&c&nEffects" with lore "&8Information|| &8▪ {@h2}Current Effects||%check [potion effects of player is set] ? join potion effects of arg-1 with ""||"" : ""No Potion Effects""%" to be unstealable
+            format slot 8 of sender with bottle of enchanting named "&c&nExperience" with lore "&8Information|| &8▪ {@h2}Level &e%player-arg's level%|| &8▪ {@h2}Points &e%player-arg's xp%" to be unstealable
+            set {_n} to 1
+            set {_slot} to 45
+            loop 9 times:
+                format slot ({_slot}) of sender with {_inventory.%player-arg%::%loop-num%} to be unstealable
+                add 1 to {_slot}
+            set {_slot} to 18
+            loop integers from 10 to 36:
+                format slot ({_slot}) of sender with {_inventory.%player-arg%::%loop-num%} to be unstealable
+                add 1 to {_slot}
+command /workbench:
+    permission: Core.workbench
+    permission message: {@permissionError} [Core.workbench]
+    aliases: /craft, /crafting, /wb, /wbench
+    description: Opens a crafting inventory
+    trigger:
+        open workbench inventory to player
+        send "{@p} Opened Workbench"
+command /me [<text>]:
+    permission: Core.me
+    permission message: {@permissionError} [Core.me]
+    aliases: /me_irl, /emote
+    description: Allows you to emote
+    trigger:
+        if arg 1 is set:
+            broadcast " &8&l*&r &7%player% &f&o%arg-1% &8&l*&r"
+command /colors:
+    permission: Core.colors
+    permission message: {@permissionError} [Core.colors]
+    aliases: /colorcodes, /color
+    description: Shows all the Minecraft color codes
+    trigger:
+        send "&6&m---+---&r &eMinecraft Colors &6&m---+---&r"
+        send "&7&oPlace an ampersand (&) in front of the corresponding color."
+        send " &00 &11 &22 &33 &44"
+        send " &55 &66 &77 &88 &99"
+        send " {@h2}a &bb &cc &dd &ee"
+        send " &ff &kk&r(k) &ll&r &mm&r"
+        send " &nn&r &oo &rr"
+command /tpr [<offline player>]:
+    permission: Core.tp.request
+    permission message: {@permissionError} [Core.tp.request]
+    aliases: /tpa
+    description: Request to teleport to another player
+    trigger:
+        if arg 1 is set:
+            if offline player-arg is online:
+                if "%{Core.tpRequest::%offline player-arg%::*}%" does not contain "%sender%":
+                    add sender to {Core.tpRequest::%offline player-arg%::*}
+                    send "{@p} Teleport request sent to {@h}%offline player-arg%{@t}." to sender
+                    send "{@p} {@h}%sender%{@t} has requested to teleport to you." to offline player-arg
+                    jsonCore("%offline player-arg%", "{@p} ||{@h2}&lACCEPT&r ||ttp:&7Accept &f%sender%'s&7 teleport%nl%&7request.||cmd:/tpraccept %sender%||&c&lDECLINE||ttp:&7Decline &f%sender%'s&7 teleport%nl%&7request.||cmd:/tprdecline %sender%")
+                else:
+                    send "{@error} You have already requested to teleport to {@h}%offline player-arg%{@t}."
+            else:
+                send "{@error} &6%offline player-arg%&c is offline."
+        else:
+            send "&cUsage: /tpr [player]"
+command /tpraccept [<offline player>]:
+    permission: Core.tp.request.accept
+    permission message: {@permissionError} [Core.tp.request.accept]
+    aliases: /tpaccept, /tpaaccept
+    description: Accepts a player's teleport request
+    trigger:
+        if arg 1 is set:
+            if offline player-arg is online:
+                if "%{Core.tpRequest::%sender%::*}%" contains "%offline player-arg%":
+                    remove offline player-arg from {Core.tpRequest::%sender%::*}
+                    send "{@p} Accepted {@h}%offline player-arg%'s{@t} teleport request." to sender
+                    send "{@p} {@h}%sender%{@t} has accepted your teleport request." to offline player-arg
+                    console command "/tp %offline player-arg% %sender%"
+                else:
+                    send "{@error} &6%offline player-arg%&c has not requested to teleport."
+            else:
+                send "{@error} &6%offline player-arg%&c is offline."
+        else:
+            send "&cUsage: /tpraccept [player]"
+command /tprdecline [<offline player>]:
+    permission: Core.tp.request.decline
+    permission message: {@permissionError} [Core.tp.request.decline]
+    aliases: /tpdecline, /tpadecline
+    description: Accepts a player's teleport request
+    trigger:
+        if arg 1 is set:
+            if offline player-arg is online:
+                if "%{Core.tpRequest::%sender%::*}%" contains "%offline player-arg%":
+                    remove offline player-arg from {Core.tpRequest::%sender%::*}
+                    send "{@p} Declined {@h}%offline player-arg%'s{@t} teleport request." to sender
+                    send "{@p} {@h}%sender%{@t} has declined your teleport request." to offline player-arg
+                else:
+                    send "{@error} &6%offline player-arg%&c has not requested to teleport."
+            else:
+                send "{@error} &6%offline player-arg%&c is offline."
+        else:
+            send "&cUsage: /tpraccept [player]"
+command /nickname [<text="reset">] [<offline player=%sender%>]:
+    permission: Core.nickname
+    permission message: {@permissionError} [Core.nickname]
+    description: Changes your in-game name
+    trigger:
+        if arg 1 = "reset":
+            if arg 2 is not sender:
+                send "{@p} {@h}%offline player-arg%'s{@t} nickname has been reset."
+            else:
+                send "{@p} Your nickname has been removed."
+            set the offline player-arg's display name to "%name of offline player-arg%"
+            set the offline player-arg's tablist name to "%name of offline player-arg%"
+        else if arg 1 is set:
+            if arg 2 is not sender:
+                send "{@p} {@h}%offline player-arg%'s{@t} nickname has been set to &r%colored arg-1%"
+            else:
+                send "{@p} Your nickname has been set to &r%colored arg-1%"
+            set the offline player-arg's display name to "%colored arg-1%"
+            set the offline player-arg's tablist name to "%colored arg-1%"
