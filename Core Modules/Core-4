@@ -1,0 +1,153 @@
+options:
+	p: &f&l(&a&lCosmo&d&lNet&f&l)                 #prefix
+	t: &a                      #default text color
+	h: &d                      #highlighted text color
+	em: &cInvalid Permissions  #permission error
+command /Economy [<text>]:
+	description: Shows all commands for Economy
+	trigger:
+		if arg 1 is not set:
+			send "&cUsage: /Economy [help]"
+		else if arg 1 is "help":
+			send "&2&m---+---&r &aProton &2&m---+---&r"
+			send " &8• &7A List of commands can be found here:"
+			send " &f&nhttps://goo.gl/IbzW41"
+command /balance [<offline player>]:
+	permission: Economy.balance
+	description: Shows balance
+	permission message: {@em}
+	usage: /balance (player)
+	aliases: /bal, /money
+	trigger:
+		if arg 1 is not set:
+			send "{@p} You have {@h}$%{Economy.bal::%sender%}%{@t}."
+		else if arg 1 is set:
+			if arg 1 = sender:
+				send "{@p} You have {@h}$%{Economy.bal::%sender%}%{@t}."
+			else:
+				if sender has permission "Economy.balance.other":
+					send "{@p} {@h}%offline player-arg%{@t} has {@h}$%{Economy.bal::%offline player-arg%}%{@t}."
+				else:
+					send "{@em}"
+command /pay [<integer>] [<offline player>]:
+	permission: Economy.pay
+	description: Sends money to a player
+	permission message: {@em}
+	usage: /pay [amount] [player]
+	trigger:
+		if arg 1 is set:
+			if arg 2 is set:
+				if arg 1 is greater than 1:
+					if {Economy.bal::%sender%} is greater than or equal to arg-1:
+						subtract arg-1 from {Economy.bal::%sender%}
+						add arg-1 to {Economy.bal::%offline player-arg%}
+						send "{@p} You sent {@h}$%arg-1%{@t} to {@h}%offline player-arg%{@t}." to sender
+						send "{@p} You recieved {@h}$%arg-1%{@t} from {@h}%sender%{@t}." to offline player-arg
+					else:
+						send "&c&oYou don't have enough money."
+						send "&cUsage: /pay &m%arg-1%&r&c %offline player-arg%"
+				else:
+					send "&c&oYou cannot send negative quantities."
+					send "&cUsage: /pay &m%arg-1%&r&c %offline player-arg%"
+			else:
+				send "&cUsage: /pay %arg-1% [player]"
+		else:
+			send "&cUsage: /pay [amount] [player]"
+command /economy [<text>] [<integer>] [<offline player>]:
+	permission: Economy.economy
+	description: Controls economy
+	permission message: {@em}
+	usage: /economy [set|add|remove] [amount] [player]
+	trigger:
+		if arg 1 is "set" or "=":
+			if arg 2 is set:
+				if arg 3 is set:
+					set {Economy.bal::%offline player-arg%} to arg-2
+					send "{@p} Set {@h}%offline player-arg%'s{@t} balance to &a$%arg-2%{@t}."
+					send "{@p} Your balance has been set to &a$%arg-2%{@t}." to offline player-arg
+				else:
+					send "&cUsage: /economy %arg-1% %arg-2% [player]"
+			else:
+				send "&cUsage: /economy %arg-1% [amount] [player]"
+		else if arg 1 is "add" or "+":
+			if arg 2 is set:
+				if arg 3 is set:
+					add arg-2 to {Economy.bal::%offline player-arg%}
+					send "{@p} Added &a$%arg-2%{@t} to {@h}%offline player-arg%'s{@t} balance."
+					send "{@p} You were given &a$%arg-2%{@t}." to offline player-arg
+				else:
+					send "&cUsage: /economy %arg-1% %arg-2% [player]"
+			else:
+				send "&cUsage: /economy %arg-1% [amount] [player]"
+		else if arg 1 is "remove" or "-":
+			if arg 2 is set:
+				if arg 3 is set:
+					remove arg-2 from {Economy.bal::%offline player-arg%}
+					send "{@p} Removed &a$%arg-2%{@t} from {@h}%offline player-arg%'s{@t} balance."
+					send "{@p} You have lost &a$%arg-2%{@t}." to offline player-arg
+				else:
+					send "&cUsage: /economy %arg-1% %arg-2% [player]"
+			else:
+				send "&cUsage: /economy %arg-1% [amount] [player]"
+		else:
+			send "&cUsage: /economy [set|add|remove] [player]"
+#command /request [<integer>] [<player>]:
+#	permission: Economy.request
+#	description: Requests money from a player
+#	permission message: {@em}
+#	usage: /request [amount] [player]
+#	trigger:
+#		if arg 1 is set:
+#			if arg 2 is set:
+#				if {Economy.bal::%player-arg%} is less than or equal to arg-1:
+#					send "{@p} Request sent to {@h}%player-arg%{@t}."
+#					send "{@p} {@h}%sender%{@t} has requested &a$%arg-1%{@h} from you." to player-arg
+#					send "{@p} Type &6&n/rqaccept (player){@t} or &6&n/rqdeny (player){@t}."
+#					send "{@p} Request will time out in &e30 Seconds{@t}."
+#					set {Economy.moneyRequested::%sender%} to arg-1
+#					set {Economy.moneyRequestee::%player-arg%} to true
+#					set {Economy.moneyRequester::%sender%} to true
+#					wait 30 Seconds
+#					delete {Economy.moneyRequested::%sender%}
+#					delete {Economy.moneyRequestee::%player-arg%}
+#					delete {Economy.moneyRequester::%sender%}
+#					stop
+#				else:
+#					send "&c&o%player-arg% does not have enough money."
+#					send "&cUsage: /request &m%arg-1%&r&c %player-arg%"
+#			else:
+#				send "&cUsage: /request %arg-1% [player]"
+#		else:
+#			send "&cUsage: /request [amount] [player]"
+#command /rqaccept [<player>]:
+#	permission: Economy.request.accept
+#	description: Accepts a money request from a player
+#	permission message: {@em}
+#	usage: /rqaccept (player)
+#	trigger:
+#		if arg 1 is set:
+#			if {Economy.moneyRequestee::%sender%} is true:
+#				if "%{Economy.moneyRequester::%player-arg%}%" is "%player-arg%":
+#					if {Economy.bal::%sender%} is less than or equal to {Economy.moneyRequested::%player-arg%}:
+#						remove {Economy.moneyRequested::%player-arg%} from {Economy.bal::%sender%}
+#						add {Economy.moneyRequested::%player-arg%} to {Economy.bal::%player-arg%}
+#						send "{@p} &a$%{Economy.moneyRequested::%player-arg%}%{@t} was transfered to {@h}%sender%{@t}."
+#						send "{@p} You recieved &a$%{Economy.moneyRequested::%player-arg%}%{@t} from {@h}%player-arg%{@t}."
+#						delete {Economy.moneyRequested::%player-arg%}
+#						delete {Economy.moneyRequestee::%sender%}
+#						delete {Economy.moneyRequester::%player-arg%}
+#						stop
+#					else:
+#						send "&c&oYou do not have sufficient funds."
+#						send "&4Transaction canceled."
+#						send "&4Transaction canceled due to &o%sender%&r&4 not having sufficient funds." to player-arg
+#						delete {Economy.moneyRequested::%player-arg%}
+#						delete {Economy.moneyRequestee::%sender%}
+#						delete {Economy.moneyRequester::%player-arg%}
+#				else:
+#					send "&c&oYou do not have a request from %player-arg%"
+#			else:
+#				send "&cYou do not have a current request."
+#		else:
+#			send "&cUsage: /rqaccept (player)"
+#
